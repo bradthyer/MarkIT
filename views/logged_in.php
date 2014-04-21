@@ -22,7 +22,7 @@
                 <div class="row">
                   <h4>Welcome <?php echo $_SESSION['user_name']; ?>.</h4>
                   <a href="index.php?logout"><p>Logout</p></a>
-                  <a href="results.php"><p>MongoDB Results (Testing Page)</p></a>
+                  <a href="search.php"><p>MongoDB Search (Testing Page)</p></a>
                 </div>
             </div>
           </div>
