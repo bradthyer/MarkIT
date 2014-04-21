@@ -15,6 +15,82 @@ if ($login->isUserLoggedIn() == false) {
     header('Location: index.php');
 }
 
+
+        
+        try{
+            $mongo = new Mongo();
+            $db = $mongo->test;
+            $collection = $db->tweets;
+            $sentiment = $db->sentiment;
+            
+            $positive_tweets = 0;
+            $negative_tweets = 0;
+            
+            $product = $_POST['product'];
+            
+            $regex = new MongoRegex("/$product/");
+            $cursor = $collection->find(array('text' => $regex));
+            
+            $number_found = $cursor->count();  
+            foreach ($cursor as $obj) {
+                if ((sizeof($obj['geo']['coordinates'])) > 1){
+                    
+                    $sn = $obj['user']['screen_name'];
+                    $lat = $obj['geo']['coordinates'][0];
+                    $long = $obj['geo']['coordinates'][1];
+                    $id_str = $obj['id_str'];
+                    
+                    //echo 'Screen Name: ' . $obj['user']['screen_name'] . '<br/>';
+                    //echo 'Tweet: ' . $obj['text'] . '<br/>';
+                    //echo 'ID string: ' . $obj['id_str'] . '<br/>';
+                    //echo 'Lat: ' . $lat . '<br/>';
+                    //echo 'Long: ' . $long . '<br/>';
+                    //echo '[' . $lat . ',' . $long . '] <br/>';
+                    
+                    $sent = $sentiment->findOne(array('id_str' => $obj['id_str']), array('sent_score' => true, 'id_str' => true));
+                    $sentiment_score = $sent['sent_score'];
+                    //echo 'Sentiment score: ' . $sentiment_score;
+                    if ($sentiment_score >= 1)
+                    {
+                        $positive_tweets = $positive_tweets + 1;
+                    }else if ($sentiment_score <= -1){
+                        $negative_tweets = $negative_tweets + 1;
+                    }
+                    //echo '<br/> <br/>';
+                    
+                }else{
+                    
+                    //echo 'Screen Name: ' . $obj['user']['screen_name'] . '<br/>';
+                    //echo 'Tweet: ' . $obj['text'] . '<br/>';
+                    //echo 'ID string: ' . $obj['id_str'] . '<br/>';
+                    $sent = $sentiment->findOne(array('id_str' => $obj['id_str']), array('sent_score' => true, 'id_str' => true));
+                    $sentiment_score =$sent['sent_score'];
+                    //echo 'Sentiment score: ' . $sentiment_score;
+                    if ($sentiment_score >= 1)
+                    {
+                        $positive_tweets = $positive_tweets + 1;
+                    }else if ($sentiment_score <= -1){
+                        $negative_tweets = $negative_tweets + 1;
+                    }
+                    //echo '<br/> <br/>';
+                    $total_tweets = $cursor->count();
+                    $total_sentiments = $positive_tweets + $negative_tweets;
+                    $neutral_tweets = $total_tweets - $total_sentiments;
+                }
+
+        }
+        //echo 'Positive tweets: '. $positive_tweets . '<br>';
+        //echo 'Negative tweets: ' . $negative_tweets . '<br>';
+        //echo 'Neutral tweets: ' . $neutral_tweets . '<br>';
+            
+          // disconnect from server
+        $mongo->close();
+        } catch (MongoConnectionException $e) {
+          die('Error connecting to MongoDB server');
+        } catch (MongoException $e) {
+          die('Error: ' . $e->getMessage());
+        }
+        
 ?>
 
 <!doctype html>
@@ -33,45 +109,14 @@ if ($login->isUserLoggedIn() == false) {
                 <img src="img/mit_logo.svg">
             </div>
             <hr>
+            <h3>Tweets containing the word <a><?php echo $product; ?></a></h3>
+            <h4>Number of tweets: <?php echo $number_found; ?></h4>
+            <h4>Positive tweets: <?php echo $positive_tweets; ?></h4>
+            <h4>Negative tweets: <?php echo $negative_tweets; ?></h4>
+            <h4>Neutral tweets: <?php echo $neutral_tweets; ?></h4>
       </div>
-
       
-        <?php
-        
-        try{
-            $mongo = new Mongo();
-            $db = $mongo->test;
-            $collection = $db->tweets;
-            
-            $regex = new MongoRegex("//");
-            $cursor = $collection->find(array('text' => $regex));
-            
-            #echo $cursor->count() . ' document(s) found. <br/> <br/>';  
-            foreach ($cursor as $obj) {
-                if ((sizeof($obj['geo']['coordinates'])) > 1){
-                    
-                    echo 'Screen Name: ' . $obj['user']['screen_name'] . '<br/>';
-                    echo 'Tweet: ' . $obj['text'] . '<br/>';
-                    
-                    $lat = $obj['geo']['coordinates'][0];
-                    $long = $obj['geo']['coordinates'][1];
-                    
-                    echo 'Lat: ' . $lat . '<br/>';
-                    echo 'Long: ' . $long . '<br/> <br/>';
-                }
-                
-                
-        }
-            
-          // disconnect from server
-        $mongo->close();
-        } catch (MongoConnectionException $e) {
-          die('Error connecting to MongoDB server');
-        } catch (MongoException $e) {
-          die('Error: ' . $e->getMessage());
-        }
-        
-        ?>
+      
       
     <script src="js/vendor/jquery.js"></script>
     <script src="js/foundation.min.js"></script>
